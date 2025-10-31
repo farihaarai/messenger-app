@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:messenger_app/data/dummy_data.dart';
 import 'package:messenger_app/models/message.dart';
 import 'package:messenger_app/models/user.dart';
+import 'package:messenger_app/services/firestore_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final User user;
@@ -15,9 +16,10 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  List<Message> messages = dummyMessages;
+  // List<Message> messages = dummyMessages;
+  final firestore = FirestoreService();
 
-  void _sendMessage() {
+  void _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
@@ -30,10 +32,9 @@ class _ChatScreenState extends State<ChatScreen> {
       isRead: false,
     );
 
-    setState(() {
-      messages.add(newMessage);
-      _messageController.clear();
-    });
+    await firestore.sendMessage(newMessage);
+
+    _messageController.clear();
 
     // Future.delayed(const Duration(milliseconds: 100), () {
     //   _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
@@ -53,6 +54,10 @@ class _ChatScreenState extends State<ChatScreen> {
     return '$formattedHour:$minute $period';
   }
 
+  Stream<List<Message>> _messageStream() {
+    return firestore.getMessages(currentUser.id, widget.user.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -64,93 +69,102 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                final msg = messages[index];
-                final isMe = msg.senderId == currentUser.id;
+            child: StreamBuilder<List<Message>>(
+              stream: _messageStream(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return Center(child: CircularProgressIndicator());
+                }
+                final messages = snapshot.data!;
+                return ListView.builder(
+                  controller: _scrollController,
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final msg = messages[index];
+                    final isMe = msg.senderId == currentUser.id;
 
-                return GestureDetector(
-                  onLongPress: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Delete Message'),
-                        content: const Text(
-                          'Are you sure you want to delete this message?',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Cancel'),
+                    return GestureDetector(
+                      onLongPress: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Delete Message'),
+                            content: const Text(
+                              'Are you sure you want to delete this message?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    messages.removeAt(index);
+                                  });
+                                  Navigator.pop(context);
+                                },
+                                child: const Text(
+                                  'Delete',
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ),
+                            ],
                           ),
-                          TextButton(
-                            onPressed: () {
-                              setState(() {
-                                messages.removeAt(index);
-                              });
-                              Navigator.pop(context);
-                            },
-                            child: const Text(
-                              'Delete',
-                              style: TextStyle(color: Colors.red),
+                        );
+                      },
+                      child: Align(
+                        alignment: isMe
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 12,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                            horizontal: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isMe ? Colors.teal[300] : Colors.grey[300],
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(12),
+                              topRight: const Radius.circular(12),
+                              bottomLeft: isMe
+                                  ? const Radius.circular(12)
+                                  : const Radius.circular(0),
+                              bottomRight: isMe
+                                  ? const Radius.circular(0)
+                                  : const Radius.circular(12),
                             ),
                           ),
-                        ],
+                          child: Column(
+                            crossAxisAlignment: isMe
+                                ? CrossAxisAlignment.end
+                                : CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                msg.text,
+                                style: TextStyle(
+                                  color: isMe ? Colors.white : Colors.black87,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _formatTime(msg.timeStamp),
+                                style: TextStyle(
+                                  color: isMe ? Colors.white70 : Colors.black54,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     );
                   },
-                  child: Align(
-                    alignment: isMe
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(
-                        vertical: 4,
-                        horizontal: 12,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 10,
-                        horizontal: 14,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isMe ? Colors.teal[300] : Colors.grey[300],
-                        borderRadius: BorderRadius.only(
-                          topLeft: const Radius.circular(12),
-                          topRight: const Radius.circular(12),
-                          bottomLeft: isMe
-                              ? const Radius.circular(12)
-                              : const Radius.circular(0),
-                          bottomRight: isMe
-                              ? const Radius.circular(0)
-                              : const Radius.circular(12),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: isMe
-                            ? CrossAxisAlignment.end
-                            : CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            msg.text,
-                            style: TextStyle(
-                              color: isMe ? Colors.white : Colors.black87,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _formatTime(msg.timeStamp),
-                            style: TextStyle(
-                              color: isMe ? Colors.white70 : Colors.black54,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                 );
               },
             ),
