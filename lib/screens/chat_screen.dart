@@ -1,11 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'package:flutter/material.dart';
-import 'package:messenger_app/data/dummy_data.dart';
 import 'package:messenger_app/models/message.dart';
 import 'package:messenger_app/models/user.dart';
 import 'package:messenger_app/services/firestore_service.dart';
 
 class ChatScreen extends StatefulWidget {
-  final User user;
+  final User user; // This is the receiver!
   const ChatScreen({super.key, required this.user});
 
   @override
@@ -18,6 +18,18 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // List<Message> messages = dummyMessages;
   final firestore = FirestoreService();
+
+  late User currentUser;
+  @override
+  void initState() {
+    super.initState();
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    currentUser = User(
+      id: firebaseUser!.uid,
+      name: firebaseUser.displayName ?? '',
+      email: firebaseUser.email ?? '',
+    );
+  }
 
   void _sendMessage() async {
     final text = _messageController.text.trim();
@@ -72,6 +84,12 @@ class _ChatScreenState extends State<ChatScreen> {
             child: StreamBuilder<List<Message>>(
               stream: _messageStream(),
               builder: (context, snapshot) {
+                print(
+                  'Received ${snapshot.data?.length ?? 0} messages from Firestore.',
+                );
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
                 if (!snapshot.hasData) {
                   return Center(child: CircularProgressIndicator());
                 }
@@ -98,10 +116,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                 child: const Text('Cancel'),
                               ),
                               TextButton(
-                                onPressed: () {
-                                  setState(() {
-                                    messages.removeAt(index);
-                                  });
+                                onPressed: () async {
+                                  await firestore.deleteMessage(msg.id);
                                   Navigator.pop(context);
                                 },
                                 child: const Text(

@@ -6,7 +6,7 @@ class FirestoreService {
 
   // send message to firestore
   Future<void> sendMessage(Message msg) async {
-    await _db.collection('message').doc(msg.id).set({
+    await _db.collection('messages').doc(msg.id).set({
       'id': msg.id,
       'senderId': msg.senderId,
       'receiverId': msg.receiverId,

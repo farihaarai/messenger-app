@@ -1,21 +1,22 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:messenger_app/screens/chat_list_screen.dart';
-import 'package:messenger_app/screens/login_page.dart';
+import 'package:messenger_app/screens/signin_page.dart';
 
-class SignInPage extends StatefulWidget {
-  const SignInPage({super.key});
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
   @override
-  State<SignInPage> createState() => _SignInPageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
-class _SignInPageState extends State<SignInPage> {
+class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   bool _loading = false;
   String? _error;
 
-  Future<void> signInOrRegister() async {
+  Future<void> loginUser() async {
     setState(() {
       _loading = true;
       _error = null;
@@ -23,16 +24,9 @@ class _SignInPageState extends State<SignInPage> {
     try {
       final email = emailController.text.trim();
       final password = passwordController.text.trim();
-      UserCredential userCredential;
-      try {
-        userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-      } catch (e) {
-        userCredential = await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(email: email, password: password);
-      }
+      final userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
+
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -41,8 +35,18 @@ class _SignInPageState extends State<SignInPage> {
           ),
         );
       }
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        setState(() {
+          _error = 'No user found for this email. Please sign up.';
+        });
+      } else if (e.code == 'wrong-password') {
+        setState(() => _error = 'Incorrect password.');
+      } else {
+        setState(() => _error = e.message);
+      }
     } catch (e) {
-      setState(() => _error = "Failed: $e");
+      setState(() => _error = "Error: $e");
     } finally {
       setState(() => _loading = false);
     }
@@ -60,16 +64,16 @@ class _SignInPageState extends State<SignInPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.message_outlined, color: green, size: 90),
-                const SizedBox(height: 30),
+                SizedBox(height: 30),
                 Text(
-                  'Sign in to Messenger',
+                  'Login to Messenger',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: green,
                   ),
                 ),
-                const SizedBox(height: 30),
+                SizedBox(height: 30),
                 TextField(
                   controller: emailController,
                   decoration: InputDecoration(
@@ -97,21 +101,11 @@ class _SignInPageState extends State<SignInPage> {
                   ),
                 ),
                 const SizedBox(height: 25),
-                if (_loading)
-                  const CircularProgressIndicator(color: Color(0xFF075E54)),
-                if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Text(
-                      _error!,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ),
                 if (!_loading)
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: signInOrRegister,
+                      onPressed: loginUser,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: green,
                         foregroundColor: Colors.white,
@@ -124,20 +118,20 @@ class _SignInPageState extends State<SignInPage> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      child: const Text('Sign In / Sign Up'),
+                      child: Text('Login'),
                     ),
                   ),
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: () {
-                    // Navigate to your login page (or replace with your sign up logic)
+                    // Navigate to your sign up page (or replace with your sign up logic)
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => LoginPage()),
+                      MaterialPageRoute(builder: (_) => SignInPage()),
                     );
                   },
                   child: const Text(
-                    "Already have an Account? Login",
+                    "Don't have an account? Sign Up",
                     style: TextStyle(color: Color(0xFF075E54)),
                   ),
                 ),

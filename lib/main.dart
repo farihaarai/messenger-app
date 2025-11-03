@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:messenger_app/screens/signin_page.dart';
+import 'package:messenger_app/screens/login_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,7 +20,7 @@ class MyApp extends StatelessWidget {
         primaryColor: const Color(0xFF075E54),
         scaffoldBackgroundColor: const Color(0xFFECE5DD),
       ),
-      home: SignInPage(),
+      home: LoginPage(),
     );
   }
 }
