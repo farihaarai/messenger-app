@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:messenger_app/models/user.dart';
 import 'package:messenger_app/screens/chat_screen.dart';
+import 'package:messenger_app/screens/login_page.dart';
 
 class ChatListScreen extends StatelessWidget {
   final firebase_auth.User currentUser;
@@ -15,6 +16,20 @@ class ChatListScreen extends StatelessWidget {
         backgroundColor: const Color(0xFF075E54),
         title: const Text("Chats"),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            onPressed: () async {
+              await firebase_auth.FirebaseAuth.instance.signOut();
+              if (context.mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => LoginPage()),
+                );
+              }
+            },
+            icon: Icon(Icons.login_outlined),
+          ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('users').snapshots(),
@@ -69,70 +84,3 @@ class ChatListScreen extends StatelessWidget {
     );
   }
 }
-
-// import 'package:flutter/material.dart';
-// import 'package:messenger_app/data/dummy_data.dart';
-// import 'package:messenger_app/models/user.dart';
-// import 'package:messenger_app/screens/chat_screen.dart';
-
-// class ChatListScreen extends StatelessWidget {
-//   const ChatListScreen({super.key});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     // final List<User> users = [];
-
-//     return Scaffold(
-//       appBar: AppBar(
-//         backgroundColor: Colors.teal,
-//         elevation: 4,
-//         leading: const Icon(Icons.chat_rounded, color: Colors.white),
-//         title: const Text(
-//           'Messenger',
-//           style: TextStyle(
-//             color: Colors.white,
-//             fontWeight: FontWeight.w600,
-//             fontSize: 20,
-//             letterSpacing: 0.5,
-//           ),
-//         ),
-//         // centerTitle: true,
-//         // actions: [
-//         //   IconButton(
-//         //     icon: const Icon(Icons.search, color: Colors.white),
-//         //     onPressed: () {
-//         //       // Search feature coming soon!
-//         //     },
-//         //   ),
-//         //   IconButton(
-//         //     icon: const Icon(Icons.more_vert, color: Colors.white),
-//         //     onPressed: () {
-//         //       // Menu or settings
-//         //     },
-//         //   ),
-//         // ],
-//       ),
-
-//       body: ListView.builder(
-//         itemCount: dummyUsers.length,
-//         itemBuilder: (context, index) {
-//           User user = dummyUsers[index];
-//           return ListTile(
-//             leading: CircleAvatar(
-//               backgroundColor: Colors.teal.shade400,
-//               child: Text(user.name[0], style: TextStyle(color: Colors.white)),
-//             ),
-//             title: Text(user.name),
-//             subtitle: Text('Tap to chat'),
-//             onTap: () {
-//               Navigator.push(
-//                 context,
-//                 MaterialPageRoute(builder: (context) => ChatScreen(user: user)),
-//               );
-//             },
-//           );
-//         },
-//       ),
-//     );
-//   }
-// }
