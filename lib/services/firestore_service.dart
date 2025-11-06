@@ -4,7 +4,7 @@ import 'package:messenger_app/models/message.dart';
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // send message to firestore
+  // Send a new message to Firestore
   Future<void> sendMessage(Message msg) async {
     await _db.collection('messages').doc(msg.id).set({
       'id': msg.id,
@@ -17,11 +17,12 @@ class FirestoreService {
     });
   }
 
-  // Stream messages between current user & other user
+  // Stream messages between two users (real-time)
   Stream<List<Message>> getMessages(String me, String other) {
     return _db
         .collection('messages')
-        .where('participants', arrayContains: me)
+        // Fetch messages where either user is a participant
+        .where('participants', arrayContainsAny: [me, other])
         .orderBy('timeStamp')
         .snapshots()
         .map((snapshot) {
@@ -29,7 +30,7 @@ class FirestoreService {
               .map((doc) {
                 final data = doc.data();
 
-                // Filter only messages between the two users
+                // Only include messages exchanged between these two users
                 if ((data['senderId'] == me && data['receiverId'] == other) ||
                     (data['senderId'] == other && data['receiverId'] == me)) {
                   return Message(
@@ -43,13 +44,27 @@ class FirestoreService {
                 }
                 return null;
               })
-              .whereType<Message>()
+              .whereType<Message>() // removes nulls
               .toList();
         });
   }
 
-  // Delete message
+  // Delete a message
   Future<void> deleteMessage(String id) async {
     await _db.collection('messages').doc(id).delete();
+  }
+
+  // Optional: Mark message as read
+  Future<void> markAsRead(String id) async {
+    await _db.collection('messages').doc(id).update({'isRead': true});
+  }
+
+  // 🔹 Fetch all users fresh from the Firestore server (ignore cache)
+  Future<List<Map<String, dynamic>>> getAllUsersFromServer() async {
+    final querySnapshot = await _db
+        .collection('users')
+        .get(const GetOptions(source: Source.server));
+
+    return querySnapshot.docs.map((doc) => doc.data()).toList();
   }
 }
